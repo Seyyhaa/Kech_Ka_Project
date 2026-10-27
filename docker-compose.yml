@@ -1,0 +1,51 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL Database ─────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskbot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskbot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Optionally auto-run the migration on first start:
+      # - ./src/db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskbot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Task Manager Bot ─────────────────────────────────────────────────────────
+  bot:
+    build: .
+    container_name: taskbot_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/taskbot
+      # Override these at runtime or via a .env file:
+      BOT_TOKEN: ${BOT_TOKEN}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      PORT: ${PORT:-3000}
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-open}
+      ADMIN_CHAT_IDS: ${ADMIN_CHAT_IDS}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${PORT:-3000}:3000"
+    # Run migrations then start the app
+    command: sh -c "node migrate.js && node src/app.js"
+
+volumes:
+  postgres_data:
+    driver: local
