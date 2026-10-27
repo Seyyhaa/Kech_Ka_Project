@@ -98,6 +98,7 @@ async function registerBotCommands(bot) {
       { command: 'stats', description: 'View productivity stats' },
       { command: 'profile', description: 'View your profile and settings' },
       { command: 'settings', description: 'Change name, timezone, or summary time' },
+      { command: 'exampleusage', description: 'Show how to use the bot and example workflows' },
       { command: 'help', description: 'Show help and instructions' },
     ]);
     logger.info('Bot command menu registered with Telegram');

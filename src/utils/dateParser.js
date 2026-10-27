@@ -13,12 +13,15 @@ const { DateTime } = require('luxon');
 function parseDate(input, timezone = 'UTC') {
   if (!input || !input.trim()) return null;
 
-  // Use the user's "now" in their timezone as the reference point
-  const refDate = DateTime.now().setZone(timezone).toJSDate();
+  // Use the user's "now" and minute offset in their timezone as chrono reference
+  const nowInTz = DateTime.now().setZone(timezone);
+  const ref = {
+    instant: nowInTz.toJSDate(),
+    timezone: nowInTz.offset,
+  };
 
-  const parsed = chrono.parseDate(input.trim(), refDate, {
+  const parsed = chrono.parseDate(input.trim(), ref, {
     forwardDate: true,
-    timezone: timezone,
   });
 
   return parsed || null;
@@ -119,8 +122,12 @@ function getWeekRange(timezone = 'UTC') {
 function extractDateFromText(text, timezone = 'UTC') {
   if (!text || !text.trim()) return { date: null, cleanText: text || '' };
 
-  const refDate = DateTime.now().setZone(timezone).toJSDate();
-  const results = chrono.parse(text, refDate, { forwardDate: true, timezone });
+  const nowInTz = DateTime.now().setZone(timezone);
+  const ref = {
+    instant: nowInTz.toJSDate(),
+    timezone: nowInTz.offset,
+  };
+  const results = chrono.parse(text, ref, { forwardDate: true });
 
   if (!results.length) {
     return { date: null, cleanText: text.trim() };
