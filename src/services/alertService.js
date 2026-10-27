@@ -55,4 +55,53 @@ async function sendNewUserAlert(user) {
   }
 }
 
-module.exports = { sendNewUserAlert };
+/**
+ * Send user feedback to the group alert chat.
+ * Ensures sender's name and/or username are included.
+ *
+ * @param {Object} params
+ * @param {string} params.name - User's name or display name
+ * @param {string|null} params.username - Telegram username
+ * @param {number|string} params.chatId - Telegram Chat ID
+ * @param {string} params.feedbackText - The submitted feedback
+ * @param {string} [params.timezone] - Timezone for timestamping
+ */
+async function sendFeedbackAlert({ name, username, chatId, feedbackText, timezone = 'Asia/Phnom_Penh' }) {
+  if (!config.alertBotToken || !config.alertChatId) {
+    logger.debug('ALERT_BOT_TOKEN or ALERT_CHAT_ID not configured; skipping feedback alert');
+    return false;
+  }
+
+  try {
+    if (!alertApi) {
+      alertApi = new Api(config.alertBotToken);
+    }
+
+    const timeStr = formatDateTime(new Date(), timezone);
+    const displayName = escapeHtml(name || 'Unknown User');
+    const userHandle = username ? `@${escapeHtml(username)}` : '<i>(No @username)</i>';
+
+    const message = [
+      '💬 <b>New User Feedback Alert</b>',
+      '',
+      `👤 <b>From:</b> <b>${displayName}</b> (${userHandle})`,
+      `🆔 <b>Chat ID:</b> <code>${chatId}</code>`,
+      `📅 <b>Received:</b> <i>${timeStr}</i>`,
+      '',
+      '📝 <b>Feedback Message:</b>',
+      `<blockquote>${escapeHtml(feedbackText)}</blockquote>`,
+    ].join('\n');
+
+    await alertApi.sendMessage(config.alertChatId, message, {
+      parse_mode: 'HTML',
+    });
+
+    logger.info({ chatId, name }, 'Feedback alert sent via alert bot');
+    return true;
+  } catch (err) {
+    logger.error({ err, chatId }, 'Failed to send feedback alert via alert bot');
+    return false;
+  }
+}
+
+module.exports = { sendNewUserAlert, sendFeedbackAlert };

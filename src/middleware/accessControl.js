@@ -22,6 +22,7 @@ const PUBLIC_COMMANDS = new Set([
   '/help',
   '/exampleusage',
   '/examples',
+  '/feedback',
 ]);
 
 // Callback queries that are always accessible (registration flow)
@@ -72,8 +73,8 @@ function createAccessControl() {
       }
     }
 
-    // Allow in-progress registration wizard text inputs (e.g. typing name, city/timezone, custom time)
-    const REGISTRATION_STEPS = new Set([
+    // Allow in-progress registration wizard and feedback text inputs
+    const ALLOWED_INPUT_STEPS = new Set([
       'confirm_name',
       'enter_name',
       'choose_timezone',
@@ -81,8 +82,9 @@ function createAccessControl() {
       'choose_time',
       'time_custom',
       'terms',
+      'awaiting_feedback',
     ]);
-    if (ctx.session?.step && REGISTRATION_STEPS.has(ctx.session.step)) {
+    if (ctx.session?.step && ALLOWED_INPUT_STEPS.has(ctx.session.step)) {
       return next();
     }
 

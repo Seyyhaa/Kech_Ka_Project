@@ -74,9 +74,35 @@ function registerUserHandlers(bot) {
     );
   });
 
-  // Text handler for settings flows
+  // ── /feedback ────────────────────────────────────────────────────────────
+  bot.command('feedback', async (ctx) => {
+    const feedbackText = ctx.message.text.replace(/^\/feedback\s*/i, '').trim();
+
+    if (!feedbackText) {
+      ctx.session.step = 'awaiting_feedback';
+      await ctx.reply(
+        '💬 <b>Send Feedback & Suggestions</b>\n\n' +
+          'We\'d love to hear your thoughts, feature requests, or bug reports!\n\n' +
+          '👉 <b>Type or reply with your message below:</b>\n' +
+          '<i>(You can also use: <code>/feedback &lt;your message&gt;</code>)</i>',
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
+
+    await handleFeedbackSubmission(ctx, feedbackText);
+  });
+
+  // Text handler for settings and feedback flows
   bot.on('message:text', async (ctx, next) => {
     const step = ctx.session?.step;
+
+    if (step === 'awaiting_feedback') {
+      if (ctx.message.text.startsWith('/')) return next();
+      await handleFeedbackSubmission(ctx, ctx.message.text.trim());
+      return;
+    }
+
     if (!step || !step.startsWith('settings:')) return next();
     if (ctx.message.text.startsWith('/')) return next();
 
@@ -175,6 +201,47 @@ function registerUserHandlers(bot) {
     await ctx.answerCallbackQuery('Cancelled');
     await ctx.editMessageText('❌ Account deletion cancelled. Your data is safe!');
   });
+}
+
+/**
+ * Deliver user feedback to the group alert chat via alertService.
+ *
+ * @param {import('grammy').Context} ctx
+ * @param {string} feedbackText
+ */
+async function handleFeedbackSubmission(ctx, feedbackText) {
+  if (ctx.session) {
+    ctx.session.step = null;
+  }
+
+  if (!feedbackText) {
+    await ctx.reply('❌ Feedback message cannot be empty.');
+    return;
+  }
+
+  // Ensure name and username are determined
+  const senderName =
+    ctx.user?.display_name ||
+    [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(' ') ||
+    'Anonymous';
+  const username = ctx.user?.telegram_username || ctx.from?.username || null;
+  const chatId = ctx.chat?.id || ctx.from?.id;
+  const timezone = ctx.user?.timezone || 'Asia/Phnom_Penh';
+
+  const { sendFeedbackAlert } = require('../../services/alertService');
+  await sendFeedbackAlert({
+    name: senderName,
+    username,
+    chatId,
+    feedbackText,
+    timezone,
+  });
+
+  await ctx.reply(
+    `✅ <b>Thank you for your feedback, ${senderName}!</b>\n\n` +
+      'Your feedback has been delivered directly to our team. We really appreciate your input! 🙏',
+    { parse_mode: 'HTML' }
+  );
 }
 
 module.exports = { registerUserHandlers };

@@ -33,8 +33,9 @@ const HELP_TEXT = `
 /stats — Weekly completion stats
 /unregister — Delete your account
 
-<b>Help & Workflow:</b>
+<b>Help & Feedback:</b>
 /exampleusage — Full guide, workflow & examples
+/feedback &lt;text&gt; — Send feedback or bug reports to team
 /start — Main menu
 /help — Show this summary
 `.trim();
@@ -99,6 +100,9 @@ This bot is designed to be your daily productivity companion directly inside Tel
 
 ⚙️ <b>Change Preferences:</b>
 • Use <code>/settings</code> to update your display name, timezone, or daily summary time anytime.
+
+💬 <b>Got Feedback or Questions?</b>
+• Type <code>/feedback &lt;your message&gt;</code> anytime to send suggestions, requests, or bug reports directly to our team!
 `.trim();
 
 /**
