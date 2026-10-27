@@ -12,6 +12,8 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
+
 const dbUrl = process.env.DATABASE_URL || '';
 const isSsl =
   process.env.NODE_ENV === 'production' ||
