@@ -80,6 +80,10 @@ async function start() {
   // ── Bot ────────────────────────────────────────────────────────────────────
   const bot = createBot();
 
+  // Initialize bot info with Telegram (required by grammY when handling updates via webhook)
+  await bot.init();
+  logger.info({ botUsername: bot.botInfo.username }, `🤖 Bot @${bot.botInfo.username} initialized`);
+
   // Register commands with Telegram for autocomplete popup menu
   await registerBotCommands(bot);
 

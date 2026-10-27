@@ -28,6 +28,9 @@ function createWebhookRouter(bot) {
       res.sendStatus(200);
 
       try {
+        if (!bot.isInited()) {
+          await bot.init();
+        }
         await bot.handleUpdate(req.body);
       } catch (err) {
         // bot.catch already handles errors inside handlers;
