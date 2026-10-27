@@ -115,14 +115,17 @@ This bot is designed to be your daily productivity companion directly inside Tel
 function registerStartHandlers(bot) {
   // ── /start ──────────────────────────────────────────────────────────────
   bot.command('start', async (ctx) => {
-    // If ctx.user is set, they're already registered (set by accessControl middleware)
-    if (ctx.user) {
+    const userRepo = require('../../repositories/userRepository');
+    const existing = ctx.user || (await userRepo.findByChatId(ctx.chat.id));
+
+    // Active registered user -> show Home Dashboard
+    if (existing && (existing.status === 'active' || existing.role === 'admin')) {
+      ctx.user = existing;
       await sendHomeDashboard(ctx);
       return;
     }
 
-    const userRepo = require('../../repositories/userRepository');
-    const existing = await userRepo.findByChatId(ctx.chat.id);
+    // Deactivated user -> show Reactivation keyboard
     if (existing && existing.status === 'unregistered') {
       await ctx.reply(
         `👋 <b>Welcome back, ${escapeHtml(existing.display_name)}!</b>\n\n` +
@@ -133,6 +136,16 @@ function registerStartHandlers(bot) {
       return;
     }
 
+    // Pending admin approval
+    if (existing && existing.status === 'pending') {
+      await ctx.reply(
+        '⏳ <b>Registration Pending</b>\n\nYour registration is waiting for admin approval. We will notify you once reviewed!',
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
+
+    // New / Unregistered user -> show Onboarding screen
     await ctx.reply(
       '👋 <b>Welcome to Task Manager Bot!</b>\n\n' +
         'I help you manage your tasks, set reminders, and stay organized — all inside Telegram.\n\n' +

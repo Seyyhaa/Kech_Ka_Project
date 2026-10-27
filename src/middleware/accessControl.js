@@ -58,6 +58,12 @@ function createAccessControl() {
     const chatId = ctx.chat?.id || ctx.from?.id;
     if (!chatId) return next(); // System updates (e.g. my_chat_member) — pass through
 
+    // Look up the user first so ctx.user is available for public commands as well
+    const user = await userRepo.findByChatId(chatId);
+    if (user && (user.status === 'active' || user.role === 'admin')) {
+      ctx.user = user;
+    }
+
     // Always allow public commands
     if (ctx.message?.text && isPublicCommand(ctx.message.text)) {
       return next();
@@ -90,9 +96,6 @@ function createAccessControl() {
     if (ctx.session?.step && ALLOWED_INPUT_STEPS.has(ctx.session.step)) {
       return next();
     }
-
-    // Look up the user
-    const user = await userRepo.findByChatId(chatId);
 
     if (!user) {
       await sendAccessDenied(ctx, 'unregistered');
