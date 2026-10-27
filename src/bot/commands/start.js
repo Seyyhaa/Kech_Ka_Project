@@ -9,7 +9,9 @@ const {
   buildTermsKeyboard,
   buildApprovalKeyboard,
   buildReactivateKeyboard,
+  buildHomeKeyboard,
 } = require('../keyboards');
+const { escapeHtml } = require('../../utils/formatters');
 const config = require('../../config/index');
 const logger = require('../../utils/logger');
 
@@ -115,10 +117,7 @@ function registerStartHandlers(bot) {
   bot.command('start', async (ctx) => {
     // If ctx.user is set, they're already registered (set by accessControl middleware)
     if (ctx.user) {
-      await ctx.reply(
-        `👋 Welcome back, <b>${ctx.user.display_name}</b>!\n\n${HELP_TEXT}`,
-        { parse_mode: 'HTML' }
-      );
+      await sendHomeDashboard(ctx);
       return;
     }
 
@@ -126,7 +125,7 @@ function registerStartHandlers(bot) {
     const existing = await userRepo.findByChatId(ctx.chat.id);
     if (existing && existing.status === 'unregistered') {
       await ctx.reply(
-        `👋 <b>Welcome back, ${existing.display_name}!</b>\n\n` +
+        `👋 <b>Welcome back, ${escapeHtml(existing.display_name)}!</b>\n\n` +
           'Your account is currently deactivated, but your tasks and tags are safely preserved.\n\n' +
           'Would you like to reactivate your account or start fresh?',
         { parse_mode: 'HTML', reply_markup: buildReactivateKeyboard() }
@@ -156,7 +155,7 @@ function registerStartHandlers(bot) {
   bot.command('register', async (ctx) => {
     if (ctx.user) {
       await ctx.reply(
-        '✅ You are already registered! Use /help to see available commands.',
+        '✅ <b>You already have an active account!</b>\n\nUse /start to view your Home Dashboard or /list to see your tasks.',
         { parse_mode: 'HTML' }
       );
       return;
@@ -169,12 +168,19 @@ function registerStartHandlers(bot) {
     await ctx.answerCallbackQuery();
     const userRepo = require('../../repositories/userRepository');
     const user = await userRepo.reactivateByChatId(ctx.chat.id);
-    await ctx.editMessageText(
-      `🎉 <b>Account Reactivated!</b>\n\n` +
-        `Welcome back, <b>${user.display_name}</b>! All your tasks, tags, and settings have been restored.\n\n` +
-        `Use /list to view your tasks or /help to see all available commands. 🚀`,
-      { parse_mode: 'HTML' }
-    );
+    ctx.user = user;
+    await sendHomeDashboard(ctx, true, true);
+  });
+
+  // ── Home Callbacks ───────────────────────────────────────────────────────
+  bot.callbackQuery('home:help', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply(HELP_TEXT, { parse_mode: 'HTML' });
+  });
+
+  bot.callbackQuery('home:dashboard', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await sendHomeDashboard(ctx, true);
   });
 
   // ── Reset & start fresh registration ────────────────────────────────────
@@ -491,4 +497,60 @@ async function notifyAdminsForApproval(ctx, user) {
   }
 }
 
-module.exports = { registerStartHandlers, HELP_TEXT, EXAMPLE_USAGE_TEXT };
+/**
+ * Render personalized Home Dashboard for registered users.
+ * @param {Object} ctx
+ * @param {boolean} [editMessage]
+ * @param {boolean} [isReactivation]
+ */
+async function sendHomeDashboard(ctx, editMessage = false, isReactivation = false) {
+  const taskService = require('../../services/taskService');
+  let pendingCount = 0;
+  let doneCount = 0;
+  let todayCount = 0;
+
+  try {
+    const stats = await taskService.getStats(ctx.user.id, ctx.user.timezone);
+    const todayTasks = await taskService.listToday(ctx.user.id, ctx.user.timezone);
+    pendingCount = stats.pendingAll ?? stats.pendingThisWeek ?? 0;
+    doneCount = stats.doneAll ?? stats.doneThisWeek ?? 0;
+    todayCount = todayTasks.length;
+  } catch (err) {
+    logger.error({ err, userId: ctx.user.id }, 'Error fetching home stats');
+  }
+
+  const welcomeHeader = isReactivation
+    ? `🎉 <b>Account Reactivated!</b>\n\nWelcome back, <b>${escapeHtml(ctx.user.display_name)}</b>! All your tasks, tags, and settings have been restored.`
+    : `👋 <b>Welcome back, ${escapeHtml(ctx.user.display_name)}!</b>`;
+
+  const text =
+    `${welcomeHeader}\n\n` +
+    `📊 <b>Your Tasks Overview:</b>\n` +
+    `• ⏳ <b>Pending:</b> ${pendingCount} task${pendingCount === 1 ? '' : 's'}\n` +
+    `• 📅 <b>Due Today:</b> ${todayCount} task${todayCount === 1 ? '' : 's'}\n` +
+    `• ✅ <b>Completed:</b> ${doneCount} task${doneCount === 1 ? '' : 's'}\n\n` +
+    `💡 <b>Quick Actions:</b>\n` +
+    `Choose an action below to manage tasks, view stats, or adjust preferences.\n\n` +
+    `✍️ <i>Quick Add:</i> <code>/add Buy groceries today 6pm !high #home</code>`;
+
+  const options = {
+    parse_mode: 'HTML',
+    reply_markup: buildHomeKeyboard(),
+  };
+
+  if (editMessage && ctx.callbackQuery) {
+    try {
+      await ctx.editMessageText(text, options);
+      return;
+    } catch (err) {
+      if (!err.message?.includes('message is not modified')) {
+        await ctx.reply(text, options);
+      }
+      return;
+    }
+  }
+
+  await ctx.reply(text, options);
+}
+
+module.exports = { registerStartHandlers, sendHomeDashboard, HELP_TEXT, EXAMPLE_USAGE_TEXT };

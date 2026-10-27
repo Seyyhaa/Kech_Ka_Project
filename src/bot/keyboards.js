@@ -157,6 +157,19 @@ function buildReactivateKeyboard() {
     .text('🗑️ Reset & Start Fresh', 'reg:reset');
 }
 
+/** Home dashboard keyboard for registered users */
+function buildHomeKeyboard() {
+  return new InlineKeyboard()
+    .text('📋 View Tasks', 'home:list')
+    .text('➕ Add Task', 'dash:add')
+    .row()
+    .text('📅 Due Today', 'home:today')
+    .text('📊 My Stats', 'home:stats')
+    .row()
+    .text('⚙️ Settings', 'home:settings')
+    .text('❓ Help & Guide', 'home:help');
+}
+
 // ─── Admin Keyboards ───────────────────────────────────────────────────────
 
 /** Admin approve/reject buttons — used in approval-mode registrations */
@@ -187,6 +200,7 @@ module.exports = {
   buildConfirmDeleteKeyboard,
   buildConfirmUnregisterKeyboard,
   buildReactivateKeyboard,
+  buildHomeKeyboard,
   buildApprovalKeyboard,
   buildAdminUsersPaginationKeyboard,
 };

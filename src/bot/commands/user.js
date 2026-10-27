@@ -47,6 +47,23 @@ function registerUserHandlers(bot) {
     );
   });
 
+  // Home: Settings shortcut
+  bot.callbackQuery('home:settings', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const { InlineKeyboard } = require('grammy');
+    const kb = new InlineKeyboard()
+      .text('✏️ Change Name', 'settings:name')
+      .row()
+      .text('🌍 Change Timezone', 'settings:timezone')
+      .row()
+      .text('⏰ Change Summary Time', 'settings:time');
+
+    await ctx.reply(
+      '⚙️ <b>Settings</b>\n\nWhat would you like to update?',
+      { parse_mode: 'HTML', reply_markup: kb }
+    );
+  });
+
   // Settings: change name
   bot.callbackQuery('settings:name', async (ctx) => {
     await ctx.answerCallbackQuery();

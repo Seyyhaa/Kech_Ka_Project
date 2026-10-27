@@ -242,6 +242,7 @@ async function getStats(userId, timezone) {
     pendingThisWeek: parseInt(stats.pendingThisWeek, 10),
     totalAll: parseInt(stats.totalAll, 10),
     doneAll: parseInt(stats.doneAll, 10),
+    pendingAll: parseInt(stats.pendingAll, 10) || 0,
   };
 }
 

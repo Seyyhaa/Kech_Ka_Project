@@ -243,6 +243,37 @@ function registerTaskHandlers(bot) {
     await ctx.answerCallbackQuery();
   });
 
+  // ── Home Dashboard Actions ────────────────────────────────────────────────
+  bot.callbackQuery('home:list', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await sendTaskList(ctx, 1);
+  });
+
+  bot.callbackQuery('home:today', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const tasks = await taskService.listToday(ctx.user.id, ctx.user.timezone);
+    if (!tasks.length) {
+      await ctx.reply(
+        '📭 <b>No tasks due today!</b>\n\nEnjoy your free time or add something with /add.',
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
+
+    const text =
+      `📅 <b>Today's Tasks</b> (${tasks.length})\n\n` +
+      tasks.map((t) => formatTask(t, ctx.user.timezone)).join('\n\n');
+
+    await ctx.reply(text, { parse_mode: 'HTML' });
+  });
+
+  bot.callbackQuery('home:stats', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const stats = await taskService.getStats(ctx.user.id, ctx.user.timezone);
+    const { formatWeeklyStats } = require('../../utils/formatters');
+    await ctx.reply(formatWeeklyStats(stats), { parse_mode: 'HTML' });
+  });
+
   // ── Callback: Mark Done (inline button in /list) ─────────────────────────
   bot.callbackQuery(/^task:done:(\d+)$/, async (ctx) => {
     const taskId = parseInt(ctx.match[1], 10);

@@ -67,4 +67,12 @@ const kb = buildTimezoneKeyboard();
 console.log('- First button label:', kb.inline_keyboard[0][0].text);
 console.log('- First button callback:', kb.inline_keyboard[0][0].callback_data);
 
+// 6. Home Keyboard Check
+console.log('\n--- 6. Home Dashboard Keyboard ---');
+const { buildHomeKeyboard } = require('./src/bot/keyboards');
+const homeKb = buildHomeKeyboard();
+console.log('- Home buttons rows count:', homeKb.inline_keyboard.length);
+console.log('- Top left button:', homeKb.inline_keyboard[0][0].text, '->', homeKb.inline_keyboard[0][0].callback_data);
+console.log('- Top right button:', homeKb.inline_keyboard[0][1].text, '->', homeKb.inline_keyboard[0][1].callback_data);
+
 console.log('\n✨ All logic checks passed successfully!\n');
