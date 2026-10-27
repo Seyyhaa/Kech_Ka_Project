@@ -1,7 +1,8 @@
 'use strict';
 
 const userRepo = require('../repositories/userRepository');
-const { buildWelcomeKeyboard } = require('../bot/keyboards');
+const { buildWelcomeKeyboard, buildReactivateKeyboard } = require('../bot/keyboards');
+const { escapeHtml } = require('../utils/formatters');
 const config = require('../config/index');
 
 /**
@@ -31,6 +32,8 @@ const PUBLIC_CALLBACKS = new Set([
   'reg:keep_name',
   'reg:change_name',
   'reg:agree',
+  'reg:reactivate',
+  'reg:reset',
 ]);
 
 /**
@@ -96,6 +99,11 @@ function createAccessControl() {
       return;
     }
 
+    if (user.status === 'unregistered') {
+      await sendAccessDenied(ctx, 'deactivated', user);
+      return;
+    }
+
     if (user.status === 'pending') {
       await sendAccessDenied(ctx, 'pending');
       return;
@@ -120,7 +128,25 @@ function createAccessControl() {
 /**
  * Send the appropriate "access denied" message.
  */
-async function sendAccessDenied(ctx, reason) {
+async function sendAccessDenied(ctx, reason, user = null) {
+  if (reason === 'deactivated') {
+    const text =
+      `👋 <b>Welcome back, ${escapeHtml(user?.display_name || 'Friend')}!</b>\n\n` +
+      'Your account is currently deactivated, but your tasks and tags are safely preserved.\n\n' +
+      'Would you like to reactivate your account or start fresh?';
+    const replyOptions = {
+      parse_mode: 'HTML',
+      reply_markup: buildReactivateKeyboard(),
+    };
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery();
+      await ctx.reply(text, replyOptions);
+    } else {
+      await ctx.reply(text, replyOptions);
+    }
+    return;
+  }
+
   const messages = {
     unregistered:
       '👋 <b>Welcome!</b>\n\nYou need to register before you can use this bot.\nPress the button below to get started!',

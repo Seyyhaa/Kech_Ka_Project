@@ -138,7 +138,49 @@ async function updateByChatId(chatId, updates) {
 }
 
 /**
- * Delete a user and all cascaded data (tasks, reminders, tags, sessions).
+ * Soft delete a user by setting status to 'unregistered' and canceling unsent reminders.
+ * Keeps user record, tasks, and tags intact so they can be reactivated on /start.
+ *
+ * @param {number} chatId
+ */
+async function softDeleteByChatId(chatId) {
+  // 1. Mark user status as unregistered
+  const { rows } = await pool.query(
+    `UPDATE users SET status = 'unregistered', updated_at = NOW() WHERE chat_id = $1 RETURNING id`,
+    [chatId]
+  );
+  const userId = rows[0]?.id;
+
+  // 2. Cancel future unsent reminders for this user
+  if (userId) {
+    await pool.query(
+      `DELETE FROM reminders r
+       USING tasks t
+       WHERE r.task_id = t.id AND t.user_id = $1 AND r.sent = FALSE`,
+      [userId]
+    );
+  }
+
+  // 3. Clear active session state
+  await pool.query('DELETE FROM bot_sessions WHERE key = $1', [String(chatId)]);
+}
+
+/**
+ * Reactivate an unregistered/deactivated user.
+ *
+ * @param {number} chatId
+ * @returns {Promise<Object>} Reactivated user record
+ */
+async function reactivateByChatId(chatId) {
+  const { rows } = await pool.query(
+    `UPDATE users SET status = 'active', updated_at = NOW() WHERE chat_id = $1 RETURNING *`,
+    [chatId]
+  );
+  return rows[0];
+}
+
+/**
+ * Permanently delete a user and all cascaded data (tasks, reminders, tags, sessions).
  * @param {number} chatId
  */
 async function deleteByChatId(chatId) {
@@ -198,6 +240,8 @@ module.exports = {
   findById,
   create,
   updateByChatId,
+  softDeleteByChatId,
+  reactivateByChatId,
   deleteByChatId,
   listAll,
   getAdminStats,

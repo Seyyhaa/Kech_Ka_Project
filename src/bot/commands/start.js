@@ -8,6 +8,7 @@ const {
   buildSummaryTimeKeyboard,
   buildTermsKeyboard,
   buildApprovalKeyboard,
+  buildReactivateKeyboard,
 } = require('../keyboards');
 const config = require('../../config/index');
 const logger = require('../../utils/logger');
@@ -121,6 +122,18 @@ function registerStartHandlers(bot) {
       return;
     }
 
+    const userRepo = require('../../repositories/userRepository');
+    const existing = await userRepo.findByChatId(ctx.chat.id);
+    if (existing && existing.status === 'unregistered') {
+      await ctx.reply(
+        `👋 <b>Welcome back, ${existing.display_name}!</b>\n\n` +
+          'Your account is currently deactivated, but your tasks and tags are safely preserved.\n\n' +
+          'Would you like to reactivate your account or start fresh?',
+        { parse_mode: 'HTML', reply_markup: buildReactivateKeyboard() }
+      );
+      return;
+    }
+
     await ctx.reply(
       '👋 <b>Welcome to Task Manager Bot!</b>\n\n' +
         'I help you manage your tasks, set reminders, and stay organized — all inside Telegram.\n\n' +
@@ -148,6 +161,31 @@ function registerStartHandlers(bot) {
       );
       return;
     }
+    await startRegistrationFlow(ctx);
+  });
+
+  // ── Reactivate deactivated account ───────────────────────────────────────
+  bot.callbackQuery('reg:reactivate', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const userRepo = require('../../repositories/userRepository');
+    const user = await userRepo.reactivateByChatId(ctx.chat.id);
+    await ctx.editMessageText(
+      `🎉 <b>Account Reactivated!</b>\n\n` +
+        `Welcome back, <b>${user.display_name}</b>! All your tasks, tags, and settings have been restored.\n\n` +
+        `Use /list to view your tasks or /help to see all available commands. 🚀`,
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  // ── Reset & start fresh registration ────────────────────────────────────
+  bot.callbackQuery('reg:reset', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const userRepo = require('../../repositories/userRepository');
+    await userRepo.deleteByChatId(ctx.chat.id);
+    ctx.session = {};
+    await ctx.editMessageText('🗑️ <b>Previous data cleared.</b> Starting fresh registration...', {
+      parse_mode: 'HTML',
+    });
     await startRegistrationFlow(ctx);
   });
 

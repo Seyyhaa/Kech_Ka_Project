@@ -8,7 +8,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node src/app.js",
+    "start": "node migrate.js && node src/app.js",
     "dev": "nodemon src/app.js",
     "migrate": "node migrate.js",
     "test": "node test_quick.js",

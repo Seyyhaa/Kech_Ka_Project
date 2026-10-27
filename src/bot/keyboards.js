@@ -139,11 +139,22 @@ function buildConfirmDeleteKeyboard(taskId) {
     .text('❌ Cancel', `task:delete_cancel:${taskId}`);
 }
 
-/** Confirm unregister */
+/** Confirm unregister options (soft vs hard delete) */
 function buildConfirmUnregisterKeyboard() {
   return new InlineKeyboard()
-    .text('🗑️ Yes, Delete My Account', 'unreg:confirm')
+    .text('⏸ Deactivate (Keep My Tasks)', 'unreg:soft')
+    .row()
+    .text('🗑️ Wipe Everything Permanently', 'unreg:hard')
+    .row()
     .text('❌ Cancel', 'unreg:cancel');
+}
+
+/** Reactivate deactivated account */
+function buildReactivateKeyboard() {
+  return new InlineKeyboard()
+    .text('🔄 Reactivate Account', 'reg:reactivate')
+    .row()
+    .text('🗑️ Reset & Start Fresh', 'reg:reset');
 }
 
 // ─── Admin Keyboards ───────────────────────────────────────────────────────
@@ -175,6 +186,7 @@ module.exports = {
   buildPriorityKeyboard,
   buildConfirmDeleteKeyboard,
   buildConfirmUnregisterKeyboard,
+  buildReactivateKeyboard,
   buildApprovalKeyboard,
   buildAdminUsersPaginationKeyboard,
 };

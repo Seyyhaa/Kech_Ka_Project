@@ -173,33 +173,47 @@ function registerUserHandlers(bot) {
   // ── /unregister ───────────────────────────────────────────────────────────
   bot.command('unregister', async (ctx) => {
     await ctx.reply(
-      '⚠️ <b>Delete Account</b>\n\n' +
-        'This will permanently delete:\n' +
-        '• Your profile and settings\n' +
-        '• All your tasks and reminders\n' +
-        '• All your tags\n\n' +
-        '❗ <b>This action cannot be undone.</b>',
+      '⚙️ <b>Unregister Account</b>\n\n' +
+        'Choose how you would like to proceed:\n\n' +
+        '• <b>Deactivate (Recommended):</b> Stops all reminders and daily briefings, but keeps your tasks and tags safely saved so you can restore them anytime with /start.\n\n' +
+        '• <b>Wipe Permanently:</b> Completely and irreversibly deletes your account, all tasks, tags, and reminders.',
       { parse_mode: 'HTML', reply_markup: buildConfirmUnregisterKeyboard() }
     );
   });
 
-  bot.callbackQuery('unreg:confirm', async (ctx) => {
+  // Soft delete (deactivate)
+  bot.callbackQuery('unreg:soft', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const chatId = ctx.user.chat_id;
+    await userRepo.softDeleteByChatId(chatId);
+    ctx.session = {};
+    await ctx.editMessageText(
+      '⏸ <b>Account Deactivated</b>\n\n' +
+        'Your account has been deactivated. Reminders and daily briefings have been paused.\n\n' +
+        '💡 <b>Your tasks are safely preserved!</b> If you ever want to return, simply send /start to reactivate your account anytime.',
+      { parse_mode: 'HTML' }
+    );
+    logger.info({ chatId }, 'User soft-deleted / deactivated');
+  });
+
+  // Hard delete (permanent wipe)
+  bot.callbackQuery('unreg:hard', async (ctx) => {
     await ctx.answerCallbackQuery();
     const chatId = ctx.user.chat_id;
     await userRepo.deleteByChatId(chatId);
     ctx.session = {};
     await ctx.editMessageText(
-      '✅ <b>Account Deleted</b>\n\n' +
-        'All your data has been removed. Thank you for using Task Manager Bot!\n\n' +
-        'You can register again anytime with /start.',
+      '🗑️ <b>Account & Data Permanently Deleted</b>\n\n' +
+        'All your tasks, tags, and settings have been completely wiped.\n\n' +
+        'Thank you for using Task Manager Bot! You can register a fresh account anytime with /start.',
       { parse_mode: 'HTML' }
     );
-    logger.info({ chatId }, 'User unregistered');
+    logger.info({ chatId }, 'User hard-deleted / wiped permanently');
   });
 
   bot.callbackQuery('unreg:cancel', async (ctx) => {
     await ctx.answerCallbackQuery('Cancelled');
-    await ctx.editMessageText('❌ Account deletion cancelled. Your data is safe!');
+    await ctx.editMessageText('✅ Unregister cancelled. Your account and tasks remain active!');
   });
 }
 
