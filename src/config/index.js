@@ -38,6 +38,10 @@ const config = {
     .filter(Boolean)
     .map(Number),
 
+  // ── Separate Alert Bot (optional) ──────────────────────────────────────────
+  alertBotToken: process.env.ALERT_BOT_TOKEN || null,
+  alertChatId: process.env.ALERT_CHAT_ID ? process.env.ALERT_CHAT_ID.trim() : null,
+
   // ── Logging ───────────────────────────────────────────────────────────────
   logLevel: process.env.LOG_LEVEL || 'info',
 

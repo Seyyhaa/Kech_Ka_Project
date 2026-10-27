@@ -389,6 +389,12 @@ async function finalizeUserRegistration(ctx) {
   // Clear session state
   ctx.session.step = null;
 
+  // Send alert via separate Telegram bot (if configured)
+  const { sendNewUserAlert } = require('../../services/alertService');
+  sendNewUserAlert(user).catch((err) => {
+    logger.error({ err }, 'Failed to dispatch new user alert');
+  });
+
   if (user.status === 'pending') {
     await ctx.reply(
       '⏳ <b>Registration Submitted!</b>\n\n' +
